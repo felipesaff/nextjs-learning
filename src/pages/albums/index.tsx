@@ -16,8 +16,6 @@ interface Props {
 }
 
 export default function Albums({albums, albumsOwner}: Props) {
-    console.log(albums)
-    console.log(albumsOwner)
   return (
     <main
       className='flex flex-col min-h-screen items-center p-24'

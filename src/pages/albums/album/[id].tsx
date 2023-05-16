@@ -24,7 +24,6 @@ interface Props {
 }
 
 export default function Album({photos, album, user, error}: Props) {
-    console.log(photos, album)
     if(error) return <Error statusCode={500}></Error>
     return (
         <div className="lg:w-1/2 w-3/4 mx-auto py-2">
