@@ -1,18 +1,15 @@
 import axios from "axios"
-import { GetServerSideProps } from "next";
+import { GetStaticPaths, GetStaticProps } from "next";
 import Link from "next/link";
-import Error from "next/error";
 import { Comment, Post, User } from "@/types";
 
 interface Props {
     post: Post;
     comments: Comment[];
     user: User;
-    error?: boolean;
 }
 
-export default function Post({user, comments,post, error}: Props) {
-    if(error) return <Error statusCode={500} />
+export default function Post({user, comments,post}: Props) {
     return (
             <div className="lg:w-1/2 w-3/4 mx-auto py-2">
                 <Link href='/blog' className="text-indigo-600">return</Link>
@@ -34,7 +31,22 @@ export default function Post({user, comments,post, error}: Props) {
     )
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getStaticPaths: GetStaticPaths = async () => {
+    const res: Post[] = await axios.get(
+        `${process.env.API_URL}/posts`
+    )
+    .then(res => res.data);
+
+    const paths = res.map(post => ({
+        params: {
+            id: post.id.toString()
+        }
+    }))
+
+    return {paths, fallback: 'blocking'}
+}
+
+export const getStaticProps: GetStaticProps = async (context) => {
     try {
         const [
             post,
@@ -42,20 +54,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             users
         ] = await Promise.all([
             axios.get(`${process.env.API_URL}/posts/${context.params?.id}`)
-            .then(res => res.data)
-            .catch(err => err.json()),
+            .then(res => res.data),
             axios.get(`${process.env.API_URL}/comments?postId=${context.params?.id}`)
-            .then(res => res.data)
-            .catch(err => err.json()),
+            .then(res => res.data),
             axios.get(`${process.env.API_URL}/users`)
             .then(res =>res.data)
-            .catch(err => err.json())
         ])
         const user = users.find((user: User) => user.id === post.userId)
     
         return {props: {user, post, comments}}
     }
     catch {
-        return {props: { error: true } }
+        return { notFound: true }
     }
 }

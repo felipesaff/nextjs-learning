@@ -1,14 +1,9 @@
-import { User } from "@/types";
-import axios from "axios"
-import { GetServerSideProps } from "next"
+import { Album, User } from "@/types";
+import axios from "axios";
+import { GetStaticPaths, GetStaticProps } from "next";
 import Error from "next/error";
 import Link from "next/link";
 
-interface Album {
-    userId: number;
-    id: number;
-    title: string;
-}
 interface Photo {
     albumId: number;
     id: number;
@@ -33,11 +28,11 @@ export default function Album({photos, album, user, error}: Props) {
                     <h1 className="text-center font-bold text-3xl my-4"> {album.title} </h1>
                 </div>
                 <p className="text-xl text-center mt-8 mb-4">Photos ({photos.length}) </p>
-                <div className="grid-cols-4 inline-grid gap-4">
+                <div className="flex flex-wrap justify-center">
                     {
                         photos.map((photo, i) => (
-                            <div className="flex flex-col relative" key={i}>
-                                <span className="absolute font-bold text-center px-2 top-4"> {photo.title} </span>
+                            <div className="flex flex-col justify-center items-center relative overflow-hidden p-2" key={i}>
+                                <span className="absolute font-bold text-center px-2"> {photo.title} </span>
                                 <img src={photo.thumbnailUrl} alt="" />
                             </div>
                         ))
@@ -47,24 +42,37 @@ export default function Album({photos, album, user, error}: Props) {
     )
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getStaticPaths: GetStaticPaths = async () => {
+    const res: Album[] = await axios.get(
+        `${process.env.API_URL}/albums`
+    )
+    .then(res => res.data);
+
+    const paths = res.map(post => ({
+        params: {
+            id: post.id.toString()
+        }
+    }))
+
+    return {paths, fallback: 'blocking'}
+}
+
+export const getStaticProps: GetStaticProps = async (context) => {
     try {
         const [users, album, photos] = await Promise.all([
             axios.get(`${process.env.API_URL}/users`)
-            .then(res => res.data)
-            .catch(err => err.json()),
+            .then(res => res.data),
             axios.get(`${process.env.API_URL}/albums/${context.params?.id}`)
-            .then(res => res.data)
-            .catch(err => err.json()),
+            .then(res => res.data),
             await axios.get(`${process.env.API_URL}/albums/${context.params?.id}/photos`)
             .then(res => res.data)
-            .catch(err => err.json())
         ]);
 
         const user = users.find((user: User) => user.id === album.userId)
         return {props: { album, photos, user } }
     }
-    catch {
-        return {props: {error: true}}
+    catch(err) {
+        return {notFound: true}
     }
+    
 }
